@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# Usage:
+#
+#     $ bin/compile <build-dir> <cache-dir> <env-path>
+
+# Fail fast and fail hard.
+set -eo pipefail
+
+[ "$BUILDPACK_XTRACE" ] && set -o xtrace
+
+# Paths.
+BIN_DIR=$(cd $(dirname $0); pwd) # absolute path
+ROOT_DIR=$(dirname $BIN_DIR)
+BUILD_DIR=$1
+CACHE_DIR=$2
+ENV_DIR=$3
+
+PYTHON="$BUILD_DIR/.heroku/python/bin/python"
+PIP="$BUILD_DIR/.heroku/python/bin/pip"
+# default PYTHONHOME does not yet exist
+PYTHONHOME="$BUILD_DIR/.heroku/python"
+
+if [ ! -f "$PYTHON" ]; then
+    echo " !     Python not found"
+    exit 1
+fi
+
+if [ ! -f "$PIP" ]; then
+    echo " !     Pip not found"
+    exit 1
+fi
+
+# force reinstallation of any private dependencies
+if [ -f "$BUILD_DIR/requirements.txt" ] && [ -d "$BUILD_DIR/wheelhouse" ]; then
+    echo "-----> Installing requirements..."
+    "$PYTHON" "$PIP" install \
+        -r "$BUILD_DIR/requirements.txt" \
+        --find-links="$BUILD_DIR/wheelhouse" \
+        --no-cache-dir
+fi
